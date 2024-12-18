@@ -70,14 +70,14 @@ export default function HistoryPage() {
     const filterProfiles = () => {
         const filtered = profiles.filter((profile) => {
             const matchesSearch = profile.name?.toLowerCase().includes(searchTerm.toLowerCase());
-
+    
             const matchesFilters = Object.keys(filters).some(
                 (key) => filters[key] && profile.category?.includes(key)
             );
-
+    
             return matchesSearch && (matchesFilters || !Object.values(filters).some((val) => val));
         });
-
+    
         setFilteredProfiles(filtered);
     };
 

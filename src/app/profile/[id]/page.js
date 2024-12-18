@@ -66,8 +66,7 @@ export default function ProfileDetail() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex mt-20">
-      {/* Sidebar for Navigation */}
-      <div className="w-1/4 bg-white p-6 border-r">
+      <div className="w-1/4 bg-white p-6 border-r mt-10">
         <h3 className="text-xl font-semibold mb-6">disease area</h3>
         <div className="flex flex-col space-y-4">
           <Button className="w-full" onClick={() => setSelectedCategory('ear')} type={selectedCategory === 'ear' ? 'primary' : 'default'}>Ear </Button>
@@ -77,7 +76,7 @@ export default function ProfileDetail() {
       </div>
 
       {/* Main content */}
-      <div className="flex-grow p-8">
+      <div className="flex-grow p-8 mt-10">
 
         {/* Image Gallery */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
