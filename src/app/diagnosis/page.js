@@ -1,43 +1,54 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Button, Modal, message } from 'antd';
-import UploadArea from '@/components/UploadArea';
-import ImagePreview from '@/components/ImagePreview';
-import PredictionResult from '@/components/PredictionResult';
-import LoadingSpinner from '@/components/LoadingSpinner'; 
-import { createProfile } from '@/services/apiService';
+import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+import { Button, Modal, message } from "antd";
+
+// Import động các component phụ thuộc vào client-side
+const UploadArea = dynamic(() => import("@/components/UploadArea"), { ssr: false });
+const ImagePreview = dynamic(() => import("@/components/ImagePreview"), { ssr: false });
+const PredictionResult = dynamic(() => import("@/components/PredictionResult"), { ssr: false });
+const LoadingSpinner = dynamic(() => import("@/components/LoadingSpinner"), { ssr: false });
+
+// Import dịch vụ API
+import { createProfile } from "@/services/apiService";
 
 export default function DiagnosisPage() {
   const [fileList, setFileList] = useState([]);
-  const [previewImage, setPreviewImage] = useState('');
+  const [previewImage, setPreviewImage] = useState("");
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 
+  // Xử lý thay đổi file khi upload
   const handleChange = (info) => {
     setFileList(info.fileList);
-    if (info.file.status === 'done') {
+    if (info.file.status === "done") {
       message.success(`Upload successful: ${info.file.name}`);
-    } else if (info.file.status === 'error') {
+    } else if (info.file.status === "error") {
       message.error(`Upload failed: ${info.file.name}`);
     }
   };
 
+  // Xử lý preview ảnh
   const handlePreview = (file) => {
-    setPreviewImage(URL.createObjectURL(file.originFileObj));
-    setIsPreviewVisible(true);
+    if (typeof window !== "undefined") {
+      setPreviewImage(URL.createObjectURL(file.originFileObj));
+      setIsPreviewVisible(true);
+    }
   };
 
+  // Xử lý xóa file khỏi danh sách
   const handleRemove = (file) => {
     const updatedFileList = fileList.filter((item) => item.uid !== file.uid);
     setFileList(updatedFileList);
-    message.success('File removed');
+    message.success("File removed");
   };
 
+  // Xử lý dự đoán (call API)
   const handlePredict = async () => {
     if (fileList.length === 0) {
-      message.error('Please upload files first');
+      message.error("Please upload files first");
       return;
     }
 
@@ -46,18 +57,19 @@ export default function DiagnosisPage() {
     try {
       const data = await createProfile(fileList);
       setResult(data);
-      message.success('Prediction successful');
+      message.success("Prediction successful");
     } catch (error) {
-      message.error(error.message || 'An error occurred');
+      message.error(error.message || "An error occurred");
     } finally {
       setLoading(false);
     }
   };
 
+  // Xóa toàn bộ danh sách file
   const handleClear = () => {
     setFileList([]);
     setResult(null);
-    message.info('Files cleared');
+    message.info("Files cleared");
   };
 
   return (
@@ -78,7 +90,11 @@ export default function DiagnosisPage() {
                 </p>
                 <UploadArea fileList={fileList} handleChange={handleChange} />
                 {fileList.length > 0 && (
-                  <ImagePreview fileList={fileList} handlePreview={handlePreview} handleRemove={handleRemove} />
+                  <ImagePreview
+                    fileList={fileList}
+                    handlePreview={handlePreview}
+                    handleRemove={handleRemove}
+                  />
                 )}
               </>
             )}
@@ -89,7 +105,7 @@ export default function DiagnosisPage() {
           open={isPreviewVisible}
           footer={null}
           onCancel={() => setIsPreviewVisible(false)}
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.7)" }}
         >
           <img alt="Preview" className="w-full" src={previewImage} />
         </Modal>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Table, Button, Spin, message, Input, Space, Avatar, DatePicker } from 'antd';
+import { Table, Button, Spin, message, Input, Avatar, DatePicker, Modal } from 'antd';
 import { SearchOutlined, FileImageOutlined, DownloadOutlined } from '@ant-design/icons';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
@@ -10,10 +10,11 @@ import dayjs from 'dayjs';
 export default function ManageReports() {
   const [loadingReports, setLoadingReports] = useState(true);
   const [reports, setReports] = useState([]);
-  const [searchText, setSearchText] = useState('');
   const [filteredReports, setFilteredReports] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   const [dateRange, setDateRange] = useState([]);
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]); // Các hàng được chọn
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
 
   // Fetch Reports
   const fetchReports = async () => {
@@ -22,7 +23,7 @@ export default function ManageReports() {
       const response = await fetch('/api/manage/reports');
       const data = await response.json();
       setReports(data.reports);
-      setFilteredReports(data.reports); // Set filtered reports to all reports initially
+      setFilteredReports(data.reports);
     } catch (error) {
       console.error('Error fetching reports:', error);
       message.error('Failed to load reports');
@@ -35,17 +36,16 @@ export default function ManageReports() {
     fetchReports();
   }, []);
 
-  // Search function for Reports
+  // Search Reports
   const handleReportSearch = (e) => {
     const value = e.target.value.toLowerCase();
-    setSearchText(value);
     const filtered = reports.filter((report) =>
       report.comment.toLowerCase().includes(value)
     );
     setFilteredReports(filtered);
   };
 
-  // Lọc theo ngày tháng
+  // Filter by Date
   const handleDateRangeChange = (dates) => {
     setDateRange(dates);
     if (dates && dates.length === 2) {
@@ -60,48 +60,55 @@ export default function ManageReports() {
     }
   };
 
-  // tải ảnh report
+  // Download Images as ZIP
   const handleDownloadZip = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning("Please select at least one report.");
+      message.warning('Please select at least one report.');
       return;
     }
 
-    const zip = new JSZip(); // Tạo đối tượng ZIP
+    const zip = new JSZip();
 
-    // Lặp qua các báo cáo được chọn và thêm ảnh vào ZIP
     for (const reportId of selectedRowKeys) {
       const report = reports.find((report) => report._id === reportId);
       if (report && report.imageDetails) {
         const imageUrl = report.imageDetails.path;
-        const response = await fetch(imageUrl); // Fetch ảnh từ server
-        const blob = await response.blob(); // Lấy dữ liệu dưới dạng Blob
-        zip.file(report.imageDetails.filename, blob); // Thêm ảnh vào ZIP với tên tệp là filename
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        zip.file(report.imageDetails.filename, blob);
       }
     }
 
-    // Tạo file ZIP và tải về
     zip.generateAsync({ type: 'blob' }).then((content) => {
-      saveAs(content, `selected_reports.zip`); // Lưu file ZIP với tên là selected_reports.zip
+      saveAs(content, `selected_reports.zip`);
     });
   };
 
-  // Row selection config
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: (selectedKeys) => {
-      setSelectedRowKeys(selectedKeys);
-    },
+  // Open Modal for Image
+  const handleImageClick = (image) => {
+    setSelectedImage(image);
+    setIsModalOpen(true);
   };
 
-  // Cấu hình bảng báo cáo
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedImage(null);
+  };
+
+  // Table Columns
   const reportColumns = [
     {
       title: 'Image',
       dataIndex: ['imageDetails', 'path'],
       key: 'image',
-      render: (path) => (
-        <Avatar src={path} size={64} icon={<FileImageOutlined />} />
+      render: (path, record) => (
+        <Avatar
+          src={path}
+          size={64}
+          icon={<FileImageOutlined />}
+          onClick={() => handleImageClick(record.imageDetails)}
+          style={{ cursor: 'pointer' }}
+        />
       ),
     },
     {
@@ -111,10 +118,15 @@ export default function ManageReports() {
       render: (comment) => <span className="text-gray-700">{comment}</span>,
     },
     {
-      title: 'User ID',
+      title: 'User',
       dataIndex: 'user',
       key: 'user',
-      render: (user) => <span className="text-gray-500">{user._id}</span>,
+      render: (user) =>
+        user ? (
+          <span className="text-gray-700">{`${user.name}`}</span>
+        ) : (
+          <span className="text-gray-500">Unknown</span>
+        ),
     },
     {
       title: 'Diagnosis',
@@ -135,7 +147,7 @@ export default function ManageReports() {
       title: 'Created At',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (createdAt) => dayjs(createdAt).format('DD/MM/YYYY HH:mm'), // Hiển thị ngày tháng
+      render: (createdAt) => dayjs(createdAt).format('DD/MM/YYYY HH:mm'),
     },
   ];
 
@@ -143,21 +155,15 @@ export default function ManageReports() {
     <div className="mt-10 mx-auto max-w-6xl p-6">
       <h2 className="text-2xl font-semibold mb-6 text-center">Manage Reports</h2>
 
-      {/* Phần tìm kiếm và lọc theo ngày tháng */}
       <div className="flex justify-between items-center mb-6">
-        <div className="flex-grow">
-          <Input
-            placeholder="Search reports by comment"
-            prefix={<SearchOutlined className="text-gray-400" />}
-            value={searchText}
-            onChange={handleReportSearch}
-            allowClear
-            className="w-full md:w-1/3 p-2 rounded-lg border border-gray-300 focus:border-blue-500"
-          />
-        </div>
-        <div className="flex-grow-0">
-          <DatePicker.RangePicker onChange={handleDateRangeChange} />
-        </div>
+        <Input
+          placeholder="Search reports by comment"
+          prefix={<SearchOutlined />}
+          allowClear
+          onChange={handleReportSearch}
+          className="w-1/3"
+        />
+        <DatePicker.RangePicker onChange={handleDateRangeChange} />
       </div>
 
       {loadingReports ? (
@@ -167,25 +173,22 @@ export default function ManageReports() {
       ) : (
         <>
           <Table
-            rowSelection={rowSelection} // Thêm tính năng chọn hàng
+            rowSelection={{
+              selectedRowKeys,
+              onChange: setSelectedRowKeys,
+            }}
             dataSource={filteredReports}
             columns={reportColumns}
             rowKey="_id"
-            pagination={{
-              defaultPageSize: 5,
-              showSizeChanger: true,
-              pageSizeOptions: ['5', '10', '20', '50'],
-            }}
-            className="rounded-lg w-full"
-            style={{ fontSize: '16px' }}
+            pagination={{ pageSize: 5 }}
           />
-          {/* Ẩn nút nếu không có hàng nào được chọn */}
+
           {selectedRowKeys.length > 0 && (
             <div className="flex justify-end mt-4">
               <Button
                 icon={<DownloadOutlined />}
-                className="bg-blue-500 text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-opacity-50 rounded px-4 py-2"
-                onClick={handleDownloadZip} // Gọi hàm tải ZIP khi nhấn nút
+                className="bg-blue-500 text-white"
+                onClick={handleDownloadZip}
               >
                 Download
               </Button>
@@ -193,6 +196,18 @@ export default function ManageReports() {
           )}
         </>
       )}
+
+      <Modal open={isModalOpen} footer={null} onCancel={handleModalClose}>
+        {selectedImage && (
+          <div>
+            <img
+              src={selectedImage.path}
+              alt={selectedImage.filename}
+              style={{ width: '100%', borderRadius: '8px' }}
+            />
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

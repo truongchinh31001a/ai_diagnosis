@@ -7,11 +7,10 @@ const connectMongo = async () => {
 
   try {
     await mongoose.connect(process.env.MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      dbName: 'deepmed',
-      serverSelectionTimeoutMS: 30000,
+      dbName: 'deepmed', // Chỉ định tên cơ sở dữ liệu
+      serverSelectionTimeoutMS: 30000, // Tùy chọn timeout
     });
+    console.log('Connected to MongoDB successfully');
   } catch (error) {
     console.error('Error connecting to MongoDB:', error);
     throw new Error('MongoDB connection failed');
