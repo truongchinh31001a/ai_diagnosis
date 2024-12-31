@@ -89,8 +89,9 @@ export default function PredictionResult({ result }) {
   };
 
   const getDiagnosis = (image) => {
-    if (image.thirdPartyInfo && image.thirdPartyInfo.predictions && image.thirdPartyInfo.predictions[0] && image.thirdPartyInfo.predictions[0][1]) {
-      return image.thirdPartyInfo.predictions[0][1];
+    const predictions = image.thirdPartyInfo?.predictions;
+    if (predictions && predictions[0]) {
+      return predictions[0].slice(1).join(', '); // Ghép tất cả dự đoán, trừ phần tử đầu
     }
     return 'No diagnosis available';
   };
@@ -145,10 +146,12 @@ export default function PredictionResult({ result }) {
               />
             </div>
             <div className="modal-info">
-              <h3>{selectedImage.thirdPartyInfo?.predictions?.[0]?.[0] || 'Unknown Status'}</h3>
-              <p>
-                <strong>Diagnosis:</strong> {getDiagnosis(selectedImage)}
-              </p>
+              <h3>Predictions:</h3>
+              <ul>
+                {selectedImage.thirdPartyInfo?.predictions?.[0]?.slice(1)?.map((diagnosis, idx) => (
+                  <li key={idx}>{diagnosis}</li>
+                )) || <li>No diagnosis available</li>}
+              </ul>
 
               {!showReportForm ? (
                 <Button
